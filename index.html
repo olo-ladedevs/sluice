@@ -822,7 +822,16 @@ async function connectWallet(name) {
     let provider;
     if (name === 'Phantom') {
       provider = window.phantom?.solana || window.solana;
-      if (!provider) { window.open('https://phantom.app', '_blank'); return; }
+      if (!provider) {
+  const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    const url = encodeURIComponent('https://olo-ladedevs.github.io/sluice/');
+    window.location.href = `https://phantom.app/ul/browse/${url}?ref=${url}`;
+  } else {
+    window.open('https://phantom.app', '_blank');
+  }
+  return;
+      }
     } else if (name === 'Solflare') {
       provider = window.solflare;
       if (!provider) { window.open('https://solflare.com', '_blank'); return; }
