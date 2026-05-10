@@ -934,16 +934,19 @@ function handleSell() {
   if (!connected) { document.getElementById('wModal').classList.add('show'); return; }
   const amt = parseFloat(document.getElementById('sellAmt').value);
   if (!amt || amt <= 0) { document.getElementById('sellAmt').focus(); return; }
-  runTx('sell', amt);
+  const token = document.getElementById('sellTok').textContent;
+  const url = `https://sell.moonpay.com?apiKey=pk_test_F53KpvQ0qeLrHcZfQshFUHmWFBb04UO&baseCurrencyCode=${token.toLowerCase()}&baseCurrencyAmount=${amt}&walletAddress=${walletAddr}`;
+  window.open(url, '_blank');
 }
 
 function handleBuy() {
   if (!connected) { document.getElementById('wModal').classList.add('show'); return; }
   const amt = parseFloat(document.getElementById('buyAmt').value);
   if (!amt || amt <= 0) { document.getElementById('buyAmt').focus(); return; }
-  runTx('buy', amt);
+  const token = document.getElementById('buyTok').textContent;
+  const url = `https://buy.moonpay.com?apiKey=pk_test_F53KpvQ0qeLrHcZfQshFUHmWFBb04UO&currencyCode=${token.toLowerCase()}&baseCurrencyAmount=${amt}&walletAddress=${walletAddr}`;
+  window.open(url, '_blank');
 }
-
 function runTx(type, amt) {
   const isSell = type === 'sell';
   const steps = isSell
