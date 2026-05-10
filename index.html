@@ -864,7 +864,7 @@ mockBals.USDT = 0;
 
     async function fetchTransactions(pubkey) {
   try {
-    const res = await fetch(`https://api.helius.xyz/v0/addresses/${pubkey}/transactions?api-key=YOUR_KEY_HERE&limit=5`);
+    const res = await fetch(`https://api.helius.xyz/v0/addresses/${pubkey}/transactions?api-key=301182c9-8a6a-4a14-8707-9766224d94a6&limit=5`);
     const txs = await res.json();
     const list = document.getElementById('actList');
 
