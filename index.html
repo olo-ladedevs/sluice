@@ -727,6 +727,7 @@ let buyToken  = 'SOL';
 let tokTarget = 'sell';
 
 const mockBals = { SOL: 4.21, USDC: 312.50, USDT: 180.00 };
+  const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=301182c9-8a6a-4a14-8707-9766224d94a6';
 
 // ── Tab ───────────────────────────────────────────────────────
 function switchTab(t) {
@@ -839,9 +840,61 @@ async function connectWallet(name) {
       alert('Install Backpack wallet to continue.'); return;
     }
 
+    async function fetchBalances(pubkey) {
+  try {
+    // SOL balance
+    const solRes = await fetch(HELIUS_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1,
+        method: 'getBalance',
+        params: [pubkey]
+      })
+    });
+    const solData = await solRes.json();
+    mockBals.SOL = (solData.result.value / 1e9).toFixed(4);
+
+    // Token balances (USDC + USDT)
+    const tokRes = await fetch(HELIUS_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 2,
+        method: 'getTokenAccountsByOwner',
+        params: [pubkey, { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
+          { encoding: 'jsonParsed' }]
+      })
+    });
+    const tokData = await tokRes.json();
+    const accounts = tokData.result?.value || [];
+
+    accounts.forEach(acc => {
+      const info = acc.account.data.parsed.info;
+      const mint = info.mint;
+      const bal  = info.tokenAmount.uiAmount;
+      if (mint === 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v') mockBals.USDC = bal;
+      if (mint === 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB') mockBals.USDT = bal;
+    });
+
+    // Update UI
+    const total = (mockBals.SOL * prices.SOL + mockBals.USDC + mockBals.USDT).toFixed(2);
+    document.getElementById('heroAmt').textContent = Number(total).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('hSolBal').textContent  = mockBals.SOL;
+    document.getElementById('hSolUsd').textContent  = `$${(mockBals.SOL * prices.SOL).toFixed(2)}`;
+    document.getElementById('hUsdcBal').textContent = mockBals.USDC || 0;
+    document.getElementById('hUsdcUsd').textContent = `$${(mockBals.USDC || 0).toFixed(2)}`;
+    document.getElementById('hUsdtBal').textContent = mockBals.USDT || 0;
+    document.getElementById('hUsdtUsd').textContent = `$${(mockBals.USDT || 0).toFixed(2)}`;
+    document.getElementById('sellBal').textContent  = `${mockBals[sellToken]} ${sellToken}`;
+
+  } catch(e) { console.error('Balance fetch failed:', e); }
+    }
+
     const resp = await provider.connect();
     const pubkey = resp.publicKey.toString();
     walletAddr = pubkey.slice(0,4) + '...' + pubkey.slice(-4);
+    fetchBalances(pubkey);
 
     connected = true;
     const btn = document.getElementById('walletBtn');
