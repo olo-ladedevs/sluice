@@ -816,29 +816,45 @@ document.getElementById('walletBtn').onclick = () => {
 };
 function closeWModal() { document.getElementById('wModal').classList.remove('show'); }
 
-function connectWallet(name) {
+async function connectWallet(name) {
   closeWModal();
-  connected = true;
-  walletAddr = '7xKX...m3Rp';
-  const btn = document.getElementById('walletBtn');
-  btn.classList.add('on');
-  document.getElementById('walletLabel').textContent = walletAddr;
+  try {
+    let provider;
+    if (name === 'Phantom') {
+      provider = window.phantom?.solana || window.solana;
+      if (!provider) { window.open('https://phantom.app', '_blank'); return; }
+    } else if (name === 'Solflare') {
+      provider = window.solflare;
+      if (!provider) { window.open('https://solflare.com', '_blank'); return; }
+    } else {
+      alert('Install Backpack wallet to continue.'); return;
+    }
 
-  // Update hero
-  const total = (mockBals.SOL * prices.SOL + mockBals.USDC + mockBals.USDT).toFixed(2);
-  document.getElementById('heroAmt').textContent = Number(total).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
-  document.getElementById('heroSub').innerHTML = `<b style="color:var(--g)">+$${(mockBals.SOL*(prices.SOL||144)*0.024).toFixed(2)}</b> today`;
+    const resp = await provider.connect();
+    const pubkey = resp.publicKey.toString();
+    walletAddr = pubkey.slice(0,4) + '...' + pubkey.slice(-4);
 
-  document.getElementById('hSolBal').textContent  = mockBals.SOL;
-  document.getElementById('hSolUsd').textContent  = `$${(mockBals.SOL*(prices.SOL||144)).toFixed(2)}`;
-  document.getElementById('hUsdcBal').textContent = mockBals.USDC;
-  document.getElementById('hUsdcUsd').textContent = `$${mockBals.USDC.toFixed(2)}`;
-  document.getElementById('hUsdtBal').textContent = mockBals.USDT;
-  document.getElementById('hUsdtUsd').textContent = `$${mockBals.USDT.toFixed(2)}`;
+    connected = true;
+    const btn = document.getElementById('walletBtn');
+    btn.classList.add('on');
+    document.getElementById('walletLabel').textContent = walletAddr;
 
-  document.getElementById('sellBal').textContent = `${mockBals[sellToken]} ${sellToken}`;
+    // Update hero
+    const total = (mockBals.SOL * prices.SOL + mockBals.USDC + mockBals.USDT).toFixed(2);
+    document.getElementById('heroAmt').textContent = Number(total).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+    document.getElementById('heroSub').innerHTML = `<b style="color:var(--g)">+$${(mockBals.SOL*(prices.SOL||144)*0.024).toFixed(2)}</b> today`;
+    document.getElementById('hSolBal').textContent  = mockBals.SOL;
+    document.getElementById('hSolUsd').textContent  = `$${(mockBals.SOL*(prices.SOL||144)).toFixed(2)}`;
+    document.getElementById('hUsdcBal').textContent = mockBals.USDC;
+    document.getElementById('hUsdcUsd').textContent = `$${mockBals.USDC.toFixed(2)}`;
+    document.getElementById('hUsdtBal').textContent = mockBals.USDT;
+    document.getElementById('hUsdtUsd').textContent = `$${mockBals.USDT.toFixed(2)}`;
+    document.getElementById('sellBal').textContent  = `${mockBals[sellToken]} ${sellToken}`;
+
+  } catch(e) {
+    console.error('Wallet connection failed:', e);
+  }
 }
-
 // ── TX flow ───────────────────────────────────────────────────
 function handleSell() {
   if (!connected) { document.getElementById('wModal').classList.add('show'); return; }
