@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sluice</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+:root{
+  --bg:#06070a;
+  --s1:#0c0e14;
+  --s2:#12151e;
+  --s3:#181c27;
+  --b0:rgba(255,255,255,0.04);
+  --b1:rgba(255,255,255,0.08);
+  --b2:rgba(255,255,255,0.14);
+  --t0:#ffffff;
+  --t1:#a0a8bc;
+  --t2:#50566a;
+  --g:#b4ff6e;
+  --gd:rgba(180,255,110,0.1);
+  --gd2:rgba(180,255,110,0.18);
+  --r:#ff5f7e;
+  --rd:rgba(255,95,126,0.1);
+  --sans:'Instrument Sans',sans-serif;
+  --serif:'Instrument Serif',serif;
+}
+
+html{background:var(--bg);color:var(--t0);font-family:var(--sans);font-size:15px;-webkit-font-smoothing:antialiased}
+body{min-height:100vh;overflow-x:hidden;display:flex;flex-direction:column;align-items:center;padding:0 0 80px}
+
+/* ── ticker bar ── */
+#ticker{
+  width:100%;background:var(--s1);border-bottom:1px solid var(--b1);
+  padding:10px 20px;display:flex;gap:28px;overflow-x:auto;scrollbar-width:none;
+  font-size:12px;color:var(--t1);white-space:nowrap;
+}
+#ticker::-webkit-scrollbar{display:none}
+.tick-item{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.tick-sym{color:var(--t0);font-weight:600;letter-spacing:0.02em}
+.tick-price{font-variant-numeric:tabular-nums}
+.tick-chg{padding:2px 7px;border-radius:4px;font-size:11px;font-weight:500}
+.tick-chg.up{background:rgba(180,255,110,0.12);color:var(--g)}
+.tick-chg.dn{background:rgba(255,95,126,0.12);color:var(--r)}
+.tick-dot{width:5px;height:5px;border-radius:50%;background:var(--g);box-shadow:0 0 6px var(--g);animation:breathe 2s ease-in-out infinite;flex-shrink:0}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── wrapper ── */
+.wrap{width:100%;max-width:440px;padding:0 16px}
+
+/* ── header ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:24px 0 28px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-hex{
+  width:30px;height:30px;position:relative;
+  background:var(--g);
+  clip-path:polygon(50% 0%,95% 25%,95% 75%,50% 100%,5% 75%,5% 25%);
+  box-shadow:0 0 20px rgba(180,255,110,0.4);
+}
+.logo-hex::after{
+  content:'';position:absolute;inset:3px;
+  background:var(--bg);
+  clip-path:polygon(50% 0%,95% 25%,95% 75%,50% 100%,5% 75%,5% 25%);
+}
+.logo-word{font-family:var(--serif);font-size:22px;letter-spacing:-0.01em;color:var(--t0)}
+
+.wallet-pill{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 14px;
+  background:var(--s2);border:1px solid var(--b1);
+  border-radius:100px;font-size:12px;color:var(--t1);
+  cursor:pointer;transition:all 0.18s;
+  font-family:var(--sans);
+}
+.wallet-pill:hover{border-color:var(--b2);color:var(--t0)}
+.wallet-pill.on{border-color:rgba(180,255,110,0.3);color:var(--g)}
+.wpill-dot{width:6px;height:6px;border-radius:50%;background:var(--t2);transition:all 0.3s}
+.wallet-pill.on .wpill-dot{background:var(--g);box-shadow:0 0 6px var(--g)}
+
+/* ── balance hero ── */
+.hero{
+  padding:28px 24px 24px;
+  background:var(--s1);
+  border:1px solid var(--b1);
+  border-radius:20px;
+  margin-bottom:10px;
+  position:relative;overflow:hidden;
+  opacity:0;animation:up 0.5s ease 0.05s forwards;
+}
+.hero::before{
+  content:'';position:absolute;
+  top:-60px;right:-60px;
+  width:200px;height:200px;
+  background:radial-gradient(circle,rgba(180,255,110,0.06) 0%,transparent 65%);
+  pointer-events:none;
+}
+.hero-label{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--t2);margin-bottom:16px}
+.hero-usd{
+  font-family:var(--serif);font-size:52px;
+  letter-spacing:-0.03em;line-height:1;
+  color:var(--t0);margin-bottom:6px;
+}
+.hero-usd span{color:var(--t2);font-size:28px}
+.hero-change{font-size:13px;color:var(--t1);margin-bottom:24px}
+.hero-change b{color:var(--g)}
+
+.hero-tokens{display:flex;gap:8px}
+.htoken{
+  flex:1;padding:12px 14px;
+  background:var(--s2);border:1px solid var(--b0);
+  border-radius:12px;
+}
+.htoken-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.htoken-dot{width:7px;height:7px;border-radius:50%}
+.htoken-dot.sol{background:#9945ff;box-shadow:0 0 6px rgba(153,69,255,0.5)}
+.htoken-dot.usdc{background:#2775ca;box-shadow:0 0 6px rgba(39,117,202,0.5)}
+.htoken-dot.usdt{background:#26a17b;box-shadow:0 0 6px rgba(38,161,123,0.5)}
+.htoken-sym{font-size:11px;color:var(--t2);font-weight:600;letter-spacing:0.08em;text-transform:uppercase}
+.htoken-bal{font-size:16px;font-weight:600;color:var(--t0);line-height:1}
+.htoken-usd{font-size:11px;color:var(--t2);margin-top:2px}
+
+/* ── speed badge ── */
+.speed-bar{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:9px;margin-bottom:10px;
+  background:rgba(180,255,110,0.05);
+  border:1px solid rgba(180,255,110,0.12);
+  border-radius:10px;font-size:12px;color:var(--g);
+  opacity:0;animation:up 0.5s ease 0.15s forwards;
+}
+.speed-bar svg{flex-shrink:0}
+
+/* ── tabs ── */
+.tabs{
+  display:flex;gap:3px;padding:4px;
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:14px;margin-bottom:10px;
+  opacity:0;animation:up 0.5s ease 0.2s forwards;
+}
+.tab{
+  flex:1;padding:11px 8px;
+  background:transparent;border:none;border-radius:10px;
+  font-family:var(--sans);font-size:13px;font-weight:500;
+  color:var(--t2);cursor:pointer;transition:all 0.18s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.tab.active{background:var(--s3);color:var(--t0);border:1px solid var(--b1)}
+.tab.active.sell{color:var(--g)}
+.tab.active.buy{color:var(--r)}
+.tab-arrow{font-size:15px;font-weight:400}
+
+/* ── swap card ── */
+.card{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:20px;padding:20px;
+  opacity:0;animation:up 0.5s ease 0.25s forwards;
+}
+
+.card-head{margin-bottom:18px}
+.card-title{font-family:var(--serif);font-size:22px;font-style:italic;color:var(--t0)}
+.card-sub{font-size:12px;color:var(--t2);margin-top:3px}
+
+/* ── input box ── */
+.ibox{
+  background:var(--s2);border:1px solid var(--b1);
+  border-radius:14px;padding:16px;
+  transition:border-color 0.18s;margin-bottom:4px;
+}
+.ibox:focus-within{border-color:var(--b2)}
+.ibox.green:focus-within{border-color:rgba(180,255,110,0.35)}
+.ibox.red:focus-within{border-color:rgba(255,95,126,0.35)}
+
+.ibox-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ibox-label{font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--t2)}
+.ibox-bal{font-size:11px;color:var(--t2)}
+.ibox-bal span{color:var(--t1);cursor:pointer}
+.ibox-bal span:hover{color:var(--g)}
+
+.ibox-main{display:flex;align-items:center;gap:10px}
+.ibox-input{
+  flex:1;background:transparent;border:none;outline:none;
+  font-family:var(--sans);font-size:28px;font-weight:600;
+  color:var(--t0);letter-spacing:-0.02em;width:0;
+}
+.ibox-input::placeholder{color:var(--t2)}
+.ibox-input::-webkit-outer-spin-button,
+.ibox-input::-webkit-inner-spin-button{-webkit-appearance:none}
+
+.token-sel{
+  display:flex;align-items:center;gap:7px;
+  padding:8px 12px;background:var(--s3);
+  border:1px solid var(--b1);border-radius:10px;
+  cursor:pointer;transition:all 0.18s;white-space:nowrap;flex-shrink:0;
+  font-family:var(--sans);
+}
+.token-sel:hover{border-color:var(--b2)}
+.token-sel-dot{width:8px;height:8px;border-radius:50%}
+.token-sel-dot.SOL{background:#9945ff}
+.token-sel-dot.USDC{background:#2775ca}
+.token-sel-dot.USDT{background:#26a17b}
+.token-sel-name{font-size:14px;font-weight:600;color:var(--t0)}
+.token-sel-arrow{font-size:10px;color:var(--t2)}
+
+.ibox-usd{font-size:12px;color:var(--t2);margin-top:8px}
+
+/* ── swap arrow ── */
+.swap-arrow{
+  display:flex;justify-content:center;align-items:center;
+  height:24px;position:relative;
+}
+.swap-btn{
+  width:34px;height:34px;
+  background:var(--s3);border:1px solid var(--b2);
+  border-radius:9px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all 0.18s;font-size:15px;color:var(--t1);
+  position:absolute;z-index:1;
+}
+.swap-btn:hover{border-color:var(--b2);color:var(--t0);background:var(--s2)}
+
+/* ── rate / fees ── */
+.meta{
+  padding:14px;background:var(--s2);
+  border:1px solid var(--b0);border-radius:12px;
+  margin:14px 0;
+}
+.meta-row{
+  display:flex;justify-content:space-between;
+  font-size:12px;padding:4px 0;
+}
+.meta-row .k{color:var(--t2)}
+.meta-row .v{color:var(--t1)}
+.meta-row .v.hi{color:var(--g)}
+.meta-sep{height:1px;background:var(--b0);margin:6px 0}
+.meta-row.total .k,.meta-row.total .v{color:var(--t0);font-size:13px;font-weight:500}
+
+/* ── bank input ── */
+.bank-row{
+  display:flex;gap:8px;margin-bottom:14px;
+}
+.bank-input{
+  flex:1;padding:13px 14px;
+  background:var(--s2);border:1px solid var(--b1);
+  border-radius:12px;
+  font-family:var(--sans);font-size:14px;color:var(--t0);
+  outline:none;transition:border-color 0.18s;
+}
+.bank-input::placeholder{color:var(--t2)}
+.bank-input:focus{border-color:var(--b2)}
+.bank-select{
+  padding:13px 14px;
+  background:var(--s2);border:1px solid var(--b1);
+  border-radius:12px;
+  font-family:var(--sans);font-size:14px;color:var(--t0);
+  outline:none;cursor:pointer;appearance:none;
+  min-width:80px;
+}
+
+/* ── CTA ── */
+.cta{
+  width:100%;padding:16px;border:none;border-radius:13px;
+  font-family:var(--sans);font-size:15px;font-weight:600;
+  cursor:pointer;transition:all 0.2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  letter-spacing:0.01em;
+}
+.cta.sell{background:var(--g);color:#060a04}
+.cta.sell:hover{box-shadow:0 0 28px rgba(180,255,110,0.3);transform:translateY(-1px)}
+.cta.buy{background:var(--r);color:#fff}
+.cta.buy:hover{box-shadow:0 0 28px rgba(255,95,126,0.3);transform:translateY(-1px)}
+.cta:active{transform:translateY(0)!important;box-shadow:none!important}
+.cta:disabled{opacity:0.35;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+/* ── activity ── */
+.act{
+  background:var(--s1);border:1px solid var(--b1);
+  border-radius:20px;padding:20px;
+  margin-top:10px;
+  opacity:0;animation:up 0.5s ease 0.35s forwards;
+}
+.act-hd{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:16px;
+}
+.act-hd-l{font-size:13px;font-weight:500;color:var(--t0)}
+.act-hd-r{font-size:12px;color:var(--t2);cursor:pointer}
+.act-hd-r:hover{color:var(--t1)}
+
+.aitem{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--b0)}
+.aitem:last-child{border-bottom:none;padding-bottom:0}
+.aitem-icon{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+}
+.aitem-icon.out{background:var(--gd)}
+.aitem-icon.in{background:var(--rd)}
+.aitem-info{flex:1;min-width:0}
+.aitem-name{font-size:13px;font-weight:500;color:var(--t0);margin-bottom:2px}
+.aitem-date{font-size:11px;color:var(--t2)}
+.aitem-right{text-align:right;flex-shrink:0}
+.aitem-amt{font-size:13px;font-weight:600}
+.aitem-amt.out{color:var(--g)}
+.aitem-amt.in{color:var(--r)}
+.aitem-usd{font-size:11px;color:var(--t2);margin-top:1px}
+
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border-radius:5px;font-size:10px;font-weight:500;letter-spacing:0.04em}
+.badge.done{background:var(--gd);color:var(--g)}
+.badge.pend{background:rgba(255,180,0,0.1);color:#ffb400}
+
+/* ── token dropdown modal ── */
+.modal-bg{
+  position:fixed;inset:0;z-index:50;
+  background:rgba(6,7,10,0.85);backdrop-filter:blur(8px);
+  display:flex;align-items:flex-end;justify-content:center;
+  padding:0 16px 24px;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.modal-bg.show{opacity:1;pointer-events:all}
+.modal-box{
+  width:100%;max-width:440px;
+  background:var(--s1);border:1px solid var(--b2);
+  border-radius:20px;padding:20px;
+  transform:translateY(20px);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.modal-bg.show .modal-box{transform:translateY(0)}
+.modal-title{font-size:14px;font-weight:600;color:var(--t0);margin-bottom:16px}
+.tok-opt{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 14px;border-radius:12px;
+  cursor:pointer;transition:background 0.15s;
+}
+.tok-opt:hover{background:var(--s2)}
+.tok-opt.active{background:var(--s2)}
+.tok-circle{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.tok-circle.SOL{background:rgba(153,69,255,0.15);color:#9945ff}
+.tok-circle.USDC{background:rgba(39,117,202,0.15);color:#2775ca}
+.tok-circle.USDT{background:rgba(38,161,123,0.15);color:#26a17b}
+.tok-info{flex:1}
+.tok-name{font-size:14px;font-weight:500;color:var(--t0)}
+.tok-full{font-size:11px;color:var(--t2);margin-top:1px}
+.tok-price{font-size:13px;color:var(--t1);text-align:right}
+.modal-cancel{
+  width:100%;padding:13px;border:1px solid var(--b1);
+  border-radius:12px;background:transparent;
+  font-family:var(--sans);font-size:13px;color:var(--t2);
+  cursor:pointer;margin-top:8px;transition:border-color 0.18s;
+}
+.modal-cancel:hover{border-color:var(--b2);color:var(--t0)}
+
+/* ── wallet modal ── */
+.wmodal-bg{
+  position:fixed;inset:0;z-index:60;
+  background:rgba(6,7,10,0.9);backdrop-filter:blur(12px);
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;
+}
+.wmodal-bg.show{opacity:1;pointer-events:all}
+.wmodal{
+  width:min(380px,100%);
+  background:var(--s1);border:1px solid var(--b2);
+  border-radius:22px;padding:28px 24px;
+  transform:scale(0.96);transition:transform 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+.wmodal-bg.show .wmodal{transform:scale(1)}
+.wmodal-title{font-family:var(--serif);font-size:24px;font-style:italic;margin-bottom:4px}
+.wmodal-sub{font-size:13px;color:var(--t2);margin-bottom:22px}
+.wopt{
+  display:flex;align-items:center;gap:14px;
+  padding:14px;background:var(--s2);border:1px solid var(--b0);
+  border-radius:13px;cursor:pointer;transition:all 0.18s;margin-bottom:8px;
+}
+.wopt:hover{border-color:var(--b2);background:var(--s3)}
+.wopt-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--s3);flex-shrink:0}
+.wopt-name{font-size:14px;font-weight:500;color:var(--t0)}
+.wopt-tag{font-size:11px;color:var(--t2);margin-top:1px}
+.wopt-arrow{margin-left:auto;color:var(--t2);font-size:18px}
+
+/* ── tx modal ── */
+.txmodal-bg{
+  position:fixed;inset:0;z-index:70;
+  background:rgba(6,7,10,0.92);backdrop-filter:blur(16px);
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  opacity:0;pointer-events:none;transition:opacity 0.25s;
+}
+.txmodal-bg.show{opacity:1;pointer-events:all}
+.txmodal{
+  width:min(360px,100%);
+  background:var(--s1);border:1px solid var(--b2);
+  border-radius:22px;padding:32px 24px;text-align:center;
+  transform:scale(0.94);transition:transform 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.txmodal-bg.show .txmodal{transform:scale(1)}
+.tx-icon{font-size:40px;margin-bottom:16px;display:block}
+.tx-title{font-family:var(--serif);font-size:22px;font-style:italic;margin-bottom:6px}
+.tx-sub{font-size:13px;color:var(--t2);line-height:1.5;margin-bottom:24px}
+.tx-progress{
+  height:3px;background:var(--s3);border-radius:99px;
+  margin-bottom:20px;overflow:hidden;
+}
+.tx-bar{
+  height:100%;width:0%;background:var(--g);border-radius:99px;
+  transition:width 0.4s ease;
+}
+.tx-steps{text-align:left;margin-bottom:24px}
+.tx-step{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;font-size:13px;color:var(--t2);
+  border-bottom:1px solid var(--b0);
+}
+.tx-step:last-child{border-bottom:none}
+.tx-step.done{color:var(--t1)}
+.tx-step.active{color:var(--t0)}
+.step-dot{
+  width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;flex-shrink:0;
+  background:var(--s3);color:var(--t2);
+}
+.step-dot.done{background:var(--gd);color:var(--g)}
+.step-dot.active{background:rgba(180,255,110,0.2);color:var(--g);animation:pulse2 1s ease-in-out infinite}
+@keyframes pulse2{0%,100%{box-shadow:0 0 0 0 rgba(180,255,110,0.3)}50%{box-shadow:0 0 0 6px rgba(180,255,110,0)}}
+.tx-close{
+  width:100%;padding:14px;background:var(--s2);
+  border:1px solid var(--b1);border-radius:12px;
+  font-family:var(--sans);font-size:14px;font-weight:500;color:var(--t0);
+  cursor:pointer;transition:all 0.18s;
+}
+.tx-close:hover{background:var(--s3);border-color:var(--b2)}
+
+@keyframes up{to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin 0.8s linear infinite}
+
+/* ── network footer ── */
+.netfoot{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:20px 0 0;font-size:11px;color:var(--t2);
+}
+.netfoot-dot{width:5px;height:5px;border-radius:50%;background:var(--g);box-shadow:0 0 5px var(--g);animation:breathe 2s ease-in-out infinite}
+
+@media(max-width:380px){.hero-usd{font-size:42px}.ibox-input{font-size:24px}}
+</style>
+</head>
+<body>
+
+<!-- Live ticker -->
+<div id="ticker">
+  <div class="tick-item"><span class="tick-dot"></span><span class="tick-sym">SOL</span><span class="tick-price" id="t-sol">—</span><span class="tick-chg up" id="tc-sol">—</span></div>
+  <div class="tick-item"><span class="tick-sym">USDC</span><span class="tick-price" id="t-usdc">—</span><span class="tick-chg up" id="tc-usdc">—</span></div>
+  <div class="tick-item"><span class="tick-sym">USDT</span><span class="tick-price" id="t-usdt">—</span><span class="tick-chg up" id="tc-usdt">—</span></div>
+  <div class="tick-item" style="color:var(--t2);font-size:11px">Solana · ~400ms finality</div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="logo">
+      <div class="logo-hex"></div>
+      <span class="logo-word">Sluice</span>
+    </div>
+    <button class="wallet-pill" id="walletBtn">
+      <span class="wpill-dot"></span>
+      <span id="walletLabel">Connect</span>
+    </button>
+  </header>
+
+  <!-- Balance hero -->
+  <div class="hero">
+    <div class="hero-label">Portfolio</div>
+    <div class="hero-usd"><span>$</span><span id="heroAmt">0.00</span></div>
+    <div class="hero-change" id="heroSub">Connect wallet to view balance</div>
+    <div class="hero-tokens">
+      <div class="htoken">
+        <div class="htoken-top"><span class="htoken-dot sol"></span><span class="htoken-sym">SOL</span></div>
+        <div class="htoken-bal" id="hSolBal">—</div>
+        <div class="htoken-usd" id="hSolUsd">—</div>
+      </div>
+      <div class="htoken">
+        <div class="htoken-top"><span class="htoken-dot usdc"></span><span class="htoken-sym">USDC</span></div>
+        <div class="htoken-bal" id="hUsdcBal">—</div>
+        <div class="htoken-usd" id="hUsdcUsd">—</div>
+      </div>
+      <div class="htoken">
+        <div class="htoken-top"><span class="htoken-dot usdt"></span><span class="htoken-sym">USDT</span></div>
+        <div class="htoken-bal" id="hUsdtBal">—</div>
+        <div class="htoken-usd" id="hUsdtUsd">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Speed badge -->
+  <div class="speed-bar">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    Solana finalises in ~400ms · Funds arrive same day via Transak
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active sell" id="tabSell" onclick="switchTab('sell')"><span class="tab-arrow">↑</span> Off-ramp</button>
+    <button class="tab buy" id="tabBuy" onclick="switchTab('buy')"><span class="tab-arrow">↓</span> On-ramp</button>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- SELL panel -->
+    <div id="sellPanel">
+      <div class="card-head">
+        <div class="card-title">Send to bank</div>
+        <div class="card-sub">Wallet → Bank · Arrives same day</div>
+      </div>
+
+      <div class="ibox green">
+        <div class="ibox-top">
+          <span class="ibox-label">You send</span>
+          <span class="ibox-bal">Bal: <span id="sellBal" onclick="setMax('sell')">—</span></span>
+        </div>
+        <div class="ibox-main">
+          <input class="ibox-input" id="sellAmt" type="number" placeholder="0" oninput="calcSell()" min="0">
+          <div class="token-sel" onclick="openTokenModal('sell')">
+            <span class="token-sel-dot SOL" id="sellDot"></span>
+            <span class="token-sel-name" id="sellTok">SOL</span>
+            <span class="token-sel-arrow">▾</span>
+          </div>
+        </div>
+        <div class="ibox-usd" id="sellUsdVal">≈ $0.00</div>
+      </div>
+
+      <div class="swap-arrow"><div class="swap-btn">⇅</div></div>
+
+      <div class="ibox">
+        <div class="ibox-top"><span class="ibox-label">You receive</span></div>
+        <div class="ibox-main">
+          <input class="ibox-input" id="sellRcv" placeholder="0.00" readonly style="color:var(--t1)">
+          <div class="token-sel" style="cursor:default;opacity:0.6">
+            <span style="font-size:14px;font-weight:600;color:var(--t0)">USD</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ibox-top" style="margin:14px 0 6px"><span class="ibox-label">Bank details</span></div>
+      <div class="bank-row">
+        <input class="bank-input" placeholder="IBAN / Account number" id="bankAcct">
+        <select class="bank-select" id="bankCcy">
+          <option>USD</option><option>EUR</option><option>GBP</option><option>NGN</option>
+        </select>
+      </div>
+
+      <div class="meta">
+        <div class="meta-row"><span class="k">Rate</span><span class="v hi" id="sellRate">—</span></div>
+        <div class="meta-row"><span class="k">Network fee</span><span class="v" id="sellNetFee">—</span></div>
+        <div class="meta-row"><span class="k">Service fee (1.2%)</span><span class="v" id="sellSvcFee">—</span></div>
+        <div class="meta-sep"></div>
+        <div class="meta-row total"><span class="k">You receive</span><span class="v" id="sellTotal">—</span></div>
+      </div>
+
+      <button class="cta sell" id="sellBtn" onclick="handleSell()">↑ Send to Bank</button>
+    </div>
+
+    <!-- BUY panel -->
+    <div id="buyPanel" style="display:none">
+      <div class="card-head">
+        <div class="card-title">Fund wallet</div>
+        <div class="card-sub">Bank → Wallet · Lands in minutes</div>
+      </div>
+
+      <div class="ibox red">
+        <div class="ibox-top"><span class="ibox-label">You pay</span></div>
+        <div class="ibox-main">
+          <input class="ibox-input" id="buyAmt" type="number" placeholder="0" oninput="calcBuy()" min="0">
+          <div class="token-sel" style="cursor:default;opacity:0.6">
+            <span style="font-size:14px;font-weight:600;color:var(--t0)">USD</span>
+          </div>
+        </div>
+        <div class="ibox-usd" id="buyUsdVal" style="opacity:0">—</div>
+      </div>
+
+      <div class="swap-arrow"><div class="swap-btn">⇅</div></div>
+
+      <div class="ibox">
+        <div class="ibox-top"><span class="ibox-label">You receive</span></div>
+        <div class="ibox-main">
+          <input class="ibox-input" id="buyRcv" placeholder="0" readonly style="color:var(--t1)">
+          <div class="token-sel" onclick="openTokenModal('buy')">
+            <span class="token-sel-dot SOL" id="buyDot"></span>
+            <span class="token-sel-name" id="buyTok">SOL</span>
+            <span class="token-sel-arrow">▾</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta">
+        <div class="meta-row"><span class="k">Rate</span><span class="v hi" id="buyRate">—</span></div>
+        <div class="meta-row"><span class="k">Processing fee (2%)</span><span class="v" id="buySvcFee">—</span></div>
+        <div class="meta-sep"></div>
+        <div class="meta-row total"><span class="k">You receive</span><span class="v" id="buyTotal">—</span></div>
+      </div>
+
+      <button class="cta buy" id="buyBtn" onclick="handleBuy()">↓ Fund Wallet</button>
+    </div>
+
+  </div>
+
+  <!-- Activity -->
+  <div class="act">
+    <div class="act-hd">
+      <span class="act-hd-l">Recent</span>
+      <span class="act-hd-r">View all →</span>
+    </div>
+    <div class="aitem">
+      <div class="aitem-icon out">↑</div>
+      <div class="aitem-info">
+        <div class="aitem-name">SOL → USD</div>
+        <div class="aitem-date">May 7 · <span class="badge done">✓ Complete</span></div>
+      </div>
+      <div class="aitem-right">
+        <div class="aitem-amt out">−2.4 SOL</div>
+        <div class="aitem-usd">+$346.12</div>
+      </div>
+    </div>
+    <div class="aitem">
+      <div class="aitem-icon in">↓</div>
+      <div class="aitem-info">
+        <div class="aitem-name">USD → USDC</div>
+        <div class="aitem-date">May 3 · <span class="badge pend">⏳ Pending</span></div>
+      </div>
+      <div class="aitem-right">
+        <div class="aitem-amt in">+200 USDC</div>
+        <div class="aitem-usd">−$204.00</div>
+      </div>
+    </div>
+    <div class="aitem">
+      <div class="aitem-icon out">↑</div>
+      <div class="aitem-info">
+        <div class="aitem-name">USDT → USD</div>
+        <div class="aitem-date">Apr 29 · <span class="badge done">✓ Complete</span></div>
+      </div>
+      <div class="aitem-right">
+        <div class="aitem-amt out">−500 USDT</div>
+        <div class="aitem-usd">+$492.50</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="netfoot"><span class="netfoot-dot"></span>Solana Mainnet · Powered by Transak</div>
+</div>
+
+<!-- Token modal -->
+<div class="modal-bg" id="tokModal">
+  <div class="modal-box">
+    <div class="modal-title">Select token</div>
+    <div id="tokList"></div>
+    <button class="modal-cancel" onclick="closeTokenModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- Wallet modal -->
+<div class="wmodal-bg" id="wModal">
+  <div class="wmodal">
+    <div class="wmodal-title">Connect wallet</div>
+    <div class="wmodal-sub">Choose your Solana wallet</div>
+    <div class="wopt" onclick="connectWallet('Phantom')"><div class="wopt-icon">👻</div><div><div class="wopt-name">Phantom</div><div class="wopt-tag">Most popular</div></div><span class="wopt-arrow">→</span></div>
+    <div class="wopt" onclick="connectWallet('Solflare')"><div class="wopt-icon">🔆</div><div><div class="wopt-name">Solflare</div><div class="wopt-tag">Feature-rich</div></div><span class="wopt-arrow">→</span></div>
+    <div class="wopt" onclick="connectWallet('Backpack')"><div class="wopt-icon">🎒</div><div><div class="wopt-name">Backpack</div><div class="wopt-tag">xNFT wallet</div></div><span class="wopt-arrow">→</span></div>
+    <button class="modal-cancel" style="margin-top:12px" onclick="closeWModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- TX modal -->
+<div class="txmodal-bg" id="txModal">
+  <div class="txmodal">
+    <span class="tx-icon" id="txIcon">⚡</span>
+    <div class="tx-title" id="txTitle">Processing</div>
+    <div class="tx-sub" id="txSub">Preparing transaction…</div>
+    <div class="tx-progress"><div class="tx-bar" id="txBar"></div></div>
+    <div class="tx-steps" id="txSteps"></div>
+    <button class="tx-close" onclick="closeTx()">Close</button>
+  </div>
+</div>
+
+<script>
+// ── Prices ────────────────────────────────────────────────────
+const prices = { SOL: 0, USDC: 1, USDT: 1 };
+const changes = { SOL: 0, USDC: 0, USDT: 0 };
+
+async function fetchPrices() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana,usd-coin,tether&vs_currencies=usd&include_24hr_change=true');
+    const d = await r.json();
+    prices.SOL  = d?.solana?.usd || prices.SOL;
+    prices.USDC = d?.['usd-coin']?.usd || 1;
+    prices.USDT = d?.tether?.usd || 1;
+    changes.SOL  = d?.solana?.usd_24h_change || 0;
+    changes.USDC = d?.['usd-coin']?.usd_24h_change || 0;
+    changes.USDT = d?.tether?.usd_24h_change || 0;
+  } catch {}
+  updateTicker();
+  calcSell(); calcBuy();
+}
+
+function updateTicker() {
+  const fmt = (p) => `$${p.toFixed(p < 5 ? 4 : 2)}`;
+  const chg = (c) => `${c >= 0 ? '+' : ''}${c.toFixed(2)}%`;
+
+  [['sol','SOL'],['usdc','USDC'],['usdt','USDT']].forEach(([id,sym]) => {
+    const p = prices[sym], c = changes[sym];
+    document.getElementById(`t-${id}`).textContent = fmt(p);
+    const el = document.getElementById(`tc-${id}`);
+    el.textContent = chg(c);
+    el.className = `tick-chg ${c >= 0 ? 'up' : 'dn'}`;
+  });
+
+  document.getElementById('sellRate').textContent = `1 ${sellToken} = $${prices[sellToken].toFixed(sellToken==='SOL'?2:4)}`;
+  document.getElementById('buyRate').textContent  = `1 ${buyToken} = $${prices[buyToken].toFixed(buyToken==='SOL'?2:4)}`;
+}
+
+fetchPrices();
+setInterval(fetchPrices, 30000);
+
+// ── State ─────────────────────────────────────────────────────
+let connected = false;
+let walletAddr = '';
+let activeTab = 'sell';
+let sellToken = 'SOL';
+let buyToken  = 'SOL';
+let tokTarget = 'sell';
+
+const mockBals = { SOL: 4.21, USDC: 312.50, USDT: 180.00 };
+
+// ── Tab ───────────────────────────────────────────────────────
+function switchTab(t) {
+  activeTab = t;
+  document.getElementById('sellPanel').style.display = t === 'sell' ? 'block' : 'none';
+  document.getElementById('buyPanel').style.display  = t === 'buy'  ? 'block' : 'none';
+  document.getElementById('tabSell').className = `tab ${t==='sell'?'active sell':''}`;
+  document.getElementById('tabBuy').className  = `tab ${t==='buy' ?'active buy' :''}`;
+}
+
+// ── Calc sell ─────────────────────────────────────────────────
+function calcSell() {
+  const amt = parseFloat(document.getElementById('sellAmt').value) || 0;
+  const usd = amt * prices[sellToken];
+  const net = 0.25, svc = usd * 0.012;
+  const total = Math.max(0, usd - net - svc);
+  document.getElementById('sellUsdVal').textContent = `≈ $${usd.toFixed(2)}`;
+  document.getElementById('sellNetFee').textContent  = amt > 0 ? `$${net.toFixed(2)}` : '—';
+  document.getElementById('sellSvcFee').textContent  = amt > 0 ? `$${svc.toFixed(2)}` : '—';
+  document.getElementById('sellTotal').textContent   = amt > 0 ? `$${total.toFixed(2)}` : '—';
+  document.getElementById('sellRcv').value = amt > 0 ? total.toFixed(2) : '';
+  document.getElementById('sellRate').textContent = `1 ${sellToken} = $${prices[sellToken].toFixed(2)}`;
+}
+
+// ── Calc buy ──────────────────────────────────────────────────
+function calcBuy() {
+  const amt = parseFloat(document.getElementById('buyAmt').value) || 0;
+  const svc = amt * 0.02;
+  const net = amt - svc;
+  const rcv = buyToken === 'SOL' ? net / (prices.SOL || 1) : net / (prices[buyToken] || 1);
+  document.getElementById('buySvcFee').textContent = amt > 0 ? `$${svc.toFixed(2)}` : '—';
+  document.getElementById('buyTotal').textContent  = amt > 0 ? `${rcv.toFixed(buyToken==='SOL'?4:2)} ${buyToken}` : '—';
+  document.getElementById('buyRcv').value = amt > 0 ? rcv.toFixed(buyToken==='SOL'?4:2) : '';
+  document.getElementById('buyRate').textContent = `1 ${buyToken} = $${prices[buyToken].toFixed(2)}`;
+}
+
+function setMax(side) {
+  if (!connected) return;
+  if (side === 'sell') {
+    document.getElementById('sellAmt').value = mockBals[sellToken];
+    calcSell();
+  }
+}
+
+// ── Token modal ───────────────────────────────────────────────
+function openTokenModal(target) {
+  tokTarget = target;
+  const list = document.getElementById('tokList');
+  list.innerHTML = '';
+  const toks = [
+    {sym:'SOL', name:'Solana', price: prices.SOL},
+    {sym:'USDC',name:'USD Coin', price: prices.USDC},
+    {sym:'USDT',name:'Tether', price: prices.USDT},
+  ];
+  const cur = target === 'sell' ? sellToken : buyToken;
+  toks.forEach(t => {
+    const d = document.createElement('div');
+    d.className = `tok-opt${t.sym===cur?' active':''}`;
+    d.innerHTML = `<div class="tok-circle ${t.sym}">${t.sym.slice(0,1)}</div><div class="tok-info"><div class="tok-name">${t.sym}</div><div class="tok-full">${t.name}</div></div><div class="tok-price">$${t.price.toFixed(t.sym==='SOL'?2:4)}</div>`;
+    d.onclick = () => selectToken(t.sym);
+    list.appendChild(d);
+  });
+  document.getElementById('tokModal').classList.add('show');
+}
+
+function selectToken(sym) {
+  if (tokTarget === 'sell') {
+    sellToken = sym;
+    document.getElementById('sellTok').textContent = sym;
+    document.getElementById('sellDot').className = `token-sel-dot ${sym}`;
+    document.getElementById('sellBal').textContent = connected ? `${mockBals[sym]} ${sym}` : '—';
+    calcSell();
+  } else {
+    buyToken = sym;
+    document.getElementById('buyTok').textContent = sym;
+    document.getElementById('buyDot').className = `token-sel-dot ${sym}`;
+    calcBuy();
+  }
+  closeTokenModal();
+}
+
+function closeTokenModal() { document.getElementById('tokModal').classList.remove('show'); }
+
+// ── Wallet ────────────────────────────────────────────────────
+document.getElementById('walletBtn').onclick = () => {
+  if (!connected) document.getElementById('wModal').classList.add('show');
+};
+function closeWModal() { document.getElementById('wModal').classList.remove('show'); }
+
+function connectWallet(name) {
+  closeWModal();
+  connected = true;
+  walletAddr = '7xKX...m3Rp';
+  const btn = document.getElementById('walletBtn');
+  btn.classList.add('on');
+  document.getElementById('walletLabel').textContent = walletAddr;
+
+  // Update hero
+  const total = (mockBals.SOL * prices.SOL + mockBals.USDC + mockBals.USDT).toFixed(2);
+  document.getElementById('heroAmt').textContent = Number(total).toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('heroSub').innerHTML = `<b style="color:var(--g)">+$${(mockBals.SOL*(prices.SOL||144)*0.024).toFixed(2)}</b> today`;
+
+  document.getElementById('hSolBal').textContent  = mockBals.SOL;
+  document.getElementById('hSolUsd').textContent  = `$${(mockBals.SOL*(prices.SOL||144)).toFixed(2)}`;
+  document.getElementById('hUsdcBal').textContent = mockBals.USDC;
+  document.getElementById('hUsdcUsd').textContent = `$${mockBals.USDC.toFixed(2)}`;
+  document.getElementById('hUsdtBal').textContent = mockBals.USDT;
+  document.getElementById('hUsdtUsd').textContent = `$${mockBals.USDT.toFixed(2)}`;
+
+  document.getElementById('sellBal').textContent = `${mockBals[sellToken]} ${sellToken}`;
+}
+
+// ── TX flow ───────────────────────────────────────────────────
+function handleSell() {
+  if (!connected) { document.getElementById('wModal').classList.add('show'); return; }
+  const amt = parseFloat(document.getElementById('sellAmt').value);
+  if (!amt || amt <= 0) { document.getElementById('sellAmt').focus(); return; }
+  runTx('sell', amt);
+}
+
+function handleBuy() {
+  if (!connected) { document.getElementById('wModal').classList.add('show'); return; }
+  const amt = parseFloat(document.getElementById('buyAmt').value);
+  if (!amt || amt <= 0) { document.getElementById('buyAmt').focus(); return; }
+  runTx('buy', amt);
+}
+
+function runTx(type, amt) {
+  const isSell = type === 'sell';
+  const steps = isSell
+    ? ['Signing transaction','Broadcasting to Solana','Confirmed on-chain','Initiating bank transfer','Transfer queued']
+    : ['Verifying payment','Routing to Solana','Swapping to '+buyToken,'Broadcasting transaction','Funds in wallet'];
+
+  document.getElementById('txIcon').textContent  = isSell ? '↑' : '↓';
+  document.getElementById('txTitle').textContent = isSell ? 'Sending to bank' : 'Funding wallet';
+  document.getElementById('txSub').textContent   = isSell
+    ? `${amt} ${sellToken} → USD · ~400ms on Solana`
+    : `$${amt} USD → ${buyToken}`;
+
+  const stepsEl = document.getElementById('txSteps');
+  stepsEl.innerHTML = steps.map((s,i)=>`
+    <div class="tx-step" id="txs-${i}">
+      <div class="step-dot" id="txd-${i}">${i+1}</div>${s}
+    </div>`).join('');
+
+  document.getElementById('txBar').style.width = '0%';
+  document.getElementById('txModal').classList.add('show');
+
+  let i = 0;
+  const durations = [400, 300, 300, 600, 400];
+
+  function next() {
+    if (i > 0) {
+      document.getElementById(`txs-${i-1}`).classList.replace('active','done');
+      document.getElementById(`txd-${i-1}`).classList.replace('active','done');
+      document.getElementById(`txd-${i-1}`).textContent = '✓';
+    }
+    if (i < steps.length) {
+      document.getElementById(`txs-${i}`).classList.add('active');
+      document.getElementById(`txd-${i}`).classList.add('active');
+      document.getElementById('txBar').style.width = `${((i+1)/steps.length)*100}%`;
+      i++;
+      setTimeout(next, durations[i-1] || 400);
+    } else {
+      document.getElementById('txIcon').textContent  = '✓';
+      document.getElementById('txTitle').textContent = isSell ? 'Transfer initiated' : 'Wallet funded';
+      document.getElementById('txSub').textContent   = isSell
+        ? 'Solana confirmed in <1s. Bank transfer arrives same day.'
+        : `${buyToken} is in your wallet. Solana confirmed in <1s.`;
+    }
+  }
+  next();
+}
+
+function closeTx() { document.getElementById('txModal').classList.remove('show'); }
+
+// Close modals on bg click
+['tokModal','wModal','txModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => {
+    if(e.target.id === id) e.target.classList.remove('show');
+  });
+});
+</script>
+</body>
+</html>
+
