@@ -868,6 +868,8 @@ async function connectWallet(name) {
     });
     const tokData = await tokRes.json();
     const accounts = tokData.result?.value || [];
+    mockBals.USDC = 0;
+mockBals.USDT = 0;
 
     accounts.forEach(acc => {
       const info = acc.account.data.parsed.info;
