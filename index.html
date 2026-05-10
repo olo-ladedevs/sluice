@@ -862,10 +862,51 @@ mockBals.USDT = 0;
   } catch(e) { console.error('Balance fetch failed:', e); }
     }
 
+    async function fetchTransactions(pubkey) {
+  try {
+    const res = await fetch(`https://api.helius.xyz/v0/addresses/${pubkey}/transactions?api-key=YOUR_KEY_HERE&limit=5`);
+    const txs = await res.json();
+    const list = document.getElementById('actList');
+
+    if (!txs || txs.length === 0) {
+      list.innerHTML = `<div style="padding:20px 0;text-align:center;font-size:13px;color:var(--t2)">No transactions yet</div>`;
+      return;
+    }
+
+    list.innerHTML = txs.map(tx => {
+      const date = new Date(tx.timestamp * 1000).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+      const type = tx.type || 'Transaction';
+      const fee  = (tx.fee / 1e9).toFixed(5);
+      const isIn = tx.nativeTransfers?.some(t => t.toUserAccount === pubkey);
+      const dir  = isIn ? 'in' : 'out';
+      const arrow = isIn ? '↓' : '↑';
+      const amt  = tx.nativeTransfers?.[0]
+        ? `${(tx.nativeTransfers[0].amount / 1e9).toFixed(4)} SOL`
+        : type;
+
+      return `
+        <div class="aitem">
+          <div class="aitem-icon ${dir}">${arrow}</div>
+          <div class="aitem-info">
+            <div class="aitem-name">${type}</div>
+            <div class="aitem-date">${date} · fee: ${fee} SOL</div>
+          </div>
+          <div class="aitem-right">
+            <div class="aitem-amt ${dir}">${isIn ? '+' : '-'}${amt}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch(e) {
+    console.error('TX fetch failed:', e);
+  }
+    }
+
     const resp = await provider.connect();
     const pubkey = resp.publicKey.toString();
     walletAddr = pubkey.slice(0,4) + '...' + pubkey.slice(-4);
     fetchBalances(pubkey);
+    fetchTransactions(pubkey);
 
     connected = true;
     const btn = document.getElementById('walletBtn');
